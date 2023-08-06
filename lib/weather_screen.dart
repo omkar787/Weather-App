@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:weather_app/additional_information.dart';
 import 'package:weather_app/hourly_forecast.dart';
@@ -17,13 +18,15 @@ class WeatherScreen extends StatefulWidget {
 
 class _WeatherScreenState extends State<WeatherScreen> {
   late Future<Map<String, dynamic>> weather;
+  late Position _currentPosition;
+
   Future<Map<String, dynamic>> getWeatherData() async {
     String cityName = "Mumbai";
 
     try {
       final res = await http.get(
         Uri.parse(
-          "https://api.openweathermap.org/data/2.5/forecast?q=$cityName&APPID=${dotenv.env["API_KEY"]}&units=metric",
+          "https://api.openweathermap.org/data/2.5/forecast?lat=${_currentPosition.latitude}&lon=${_currentPosition.longitude}&APPID=${dotenv.env["API_KEY"]}&units=metric",
         ),
       );
 
@@ -39,9 +42,41 @@ class _WeatherScreenState extends State<WeatherScreen> {
     }
   }
 
+  _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    if (serviceEnabled) {
+      permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      _currentPosition = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        print(_currentPosition);
+      });
+    }
+
+    // Geolocator.getCurrentPosition(
+    //         desiredAccuracy: LocationAccuracy.high,
+    //         forceAndroidLocationManager: true)
+    //     .then((Position position) {
+    //   setState(() {
+    //     _currentPosition = position;
+    //     print(_currentPosition);
+    //   });
+    // }).catchError((e) {
+    //   print(e);
+    // });
+  }
+
   @override
   void initState() {
     super.initState();
+    _getCurrentLocation();
     weather = getWeatherData();
   }
 
