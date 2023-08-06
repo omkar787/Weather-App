@@ -41,7 +41,6 @@ class _WeatherScreenState extends State<WeatherScreen> {
 
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
     weather = getWeatherData();
   }
@@ -90,7 +89,13 @@ class _WeatherScreenState extends State<WeatherScreen> {
           String returnHours(int timeStamp) {
             final datetime =
                 DateTime.fromMillisecondsSinceEpoch(timeStamp * 1000);
-            return DateFormat("d-hh:mm a").format(datetime).toString();
+            return DateFormat.j().format(datetime).toString();
+          }
+
+          String returnDate(int timeStamp) {
+            final datetime =
+                DateTime.fromMillisecondsSinceEpoch(timeStamp * 1000);
+            return DateFormat("dd/yy").format(datetime).toString();
           }
 
           return Padding(
@@ -156,7 +161,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                   height: 8,
                 ),
                 SizedBox(
-                  height: 145,
+                  height: 155,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: 39,
@@ -164,6 +169,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                       final dt = data["list"][index + 1];
                       return HourlyForecastItem(
                         time: returnHours(dt["dt"]),
+                        date: returnDate(dt["dt"]),
                         icon: dt["weather"][0]["main"],
                         temperature: "${dt["main"]["temp"].toString()} °C",
                       );
