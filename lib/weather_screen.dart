@@ -3,6 +3,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:weather_app/additional_information.dart';
@@ -18,17 +20,25 @@ class WeatherScreen extends StatefulWidget {
 
 class _WeatherScreenState extends State<WeatherScreen> {
   late Future<Map<String, dynamic>> weather;
-  late Position _currentPosition;
+  Position? _currentPosition;
+  late List<Placemark> placemarks;
 
   Future<Map<String, dynamic>> getWeatherData() async {
-    String cityName = "Mumbai";
-
     try {
-      final res = await http.get(
-        Uri.parse(
-          "https://api.openweathermap.org/data/2.5/forecast?lat=${_currentPosition.latitude}&lon=${_currentPosition.longitude}&APPID=${dotenv.env["API_KEY"]}&units=metric",
-        ),
-      );
+      http.Response res;
+      if (_currentPosition == null) {
+        res = await http.get(
+          Uri.parse(
+            "https://api.openweathermap.org/data/2.5/forecast?q=London&APPID=${dotenv.env["API_KEY"]}&units=metric",
+          ),
+        );
+      } else {
+        res = await http.get(
+          Uri.parse(
+            "https://api.openweathermap.org/data/2.5/forecast?lat=${_currentPosition?.latitude}&lon=${_currentPosition?.longitude}&APPID=${dotenv.env["API_KEY"]}&units=metric",
+          ),
+        );
+      }
 
       final data = jsonDecode(res.body);
 
@@ -47,30 +57,38 @@ class _WeatherScreenState extends State<WeatherScreen> {
     LocationPermission permission;
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
-    if (serviceEnabled) {
-      permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      _currentPosition = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      setState(() {
-        print(_currentPosition);
-      });
-    }
+    try {
+      if (serviceEnabled) {
+        permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied ||
+              permission == LocationPermission.deniedForever) {
+            Fluttertoast.showToast(msg: "Please provide location access!");
+          }
+        }
 
-    // Geolocator.getCurrentPosition(
-    //         desiredAccuracy: LocationAccuracy.high,
-    //         forceAndroidLocationManager: true)
-    //     .then((Position position) {
-    //   setState(() {
-    //     _currentPosition = position;
-    //     print(_currentPosition);
-    //   });
-    // }).catchError((e) {
-    //   print(e);
-    // });
+        if (permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always) {
+          Position c = await Geolocator.getCurrentPosition(
+              // desiredAccuracy: LocationAccuracy.high,
+              );
+          _currentPosition = c;
+          placemarks = await placemarkFromCoordinates(c.latitude, c.longitude);
+
+          setState(() {
+            Fluttertoast.showToast(
+                msg:
+                    "${placemarks[0].locality}, ${placemarks[0].isoCountryCode}");
+            weather = getWeatherData();
+          });
+        }
+      } else {
+        Fluttertoast.showToast(msg: "Please enable location services!");
+      }
+    } catch (e) {
+      print(e.toString());
+    }
   }
 
   @override
@@ -95,6 +113,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
           IconButton(
             onPressed: () {
               setState(() {
+                _getCurrentLocation();
                 weather = getWeatherData();
               });
             },
@@ -211,20 +230,6 @@ class _WeatherScreenState extends State<WeatherScreen> {
                     },
                   ),
                 ),
-                // SingleChildScrollView(
-                //   scrollDirection: Axis.horizontal,
-                //   child: Row(
-                //     children: [
-                //       for (int i = 1; i < 40; i++)
-                //         HourlyForecastItem(
-                //           icon: data["list"][i]["weather"][0]["main"],
-                //           time: returnHours(data["list"][i]["dt"]),
-                //           temperature:
-                //               "${data["list"][i]["main"]["temp"].toString()} °C",
-                //         )
-                //     ],
-                //   ),
-                // ),
                 const SizedBox(
                   height: 20,
                 ),
