@@ -19,6 +19,7 @@ class WeatherScreen extends StatefulWidget {
 }
 
 class _WeatherScreenState extends State<WeatherScreen> {
+  String currentLocation = "London, UK";
   late Future<Map<String, dynamic>> weather;
   Position? _currentPosition;
   late List<Placemark> placemarks;
@@ -29,7 +30,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
       if (_currentPosition == null) {
         res = await http.get(
           Uri.parse(
-            "https://api.openweathermap.org/data/2.5/forecast?q=London&APPID=${dotenv.env["API_KEY"]}&units=metric",
+            "https://api.openweathermap.org/data/2.5/forecast?q=$currentLocation&APPID=${dotenv.env["API_KEY"]}&units=metric",
           ),
         );
       } else {
@@ -77,9 +78,11 @@ class _WeatherScreenState extends State<WeatherScreen> {
           placemarks = await placemarkFromCoordinates(c.latitude, c.longitude);
 
           setState(() {
-            Fluttertoast.showToast(
-                msg:
-                    "${placemarks[0].locality}, ${placemarks[0].isoCountryCode}");
+            currentLocation =
+                "${placemarks[0].locality}, ${placemarks[0].isoCountryCode}";
+            // Fluttertoast.showToast(
+            //     msg:
+            //         "${placemarks[0].locality}, ${placemarks[0].isoCountryCode}");
             weather = getWeatherData();
           });
         }
@@ -102,11 +105,21 @@ class _WeatherScreenState extends State<WeatherScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Weather App",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+        title: Column(
+          children: [
+            const Text(
+              "Weather App",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              currentLocation,
+              style: const TextStyle(
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
         centerTitle: true,
         actions: [
